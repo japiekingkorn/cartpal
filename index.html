@@ -224,10 +224,10 @@
 
         // Completely bypass React for search - use pure DOM manipulation
         function ItemsSearchBar({ onModeChange, onEditToggle, editMode }) {
-            const [viewMode, setViewMode] = useState('categories');
-            const inputRef = useRef(null);
+            const [viewMode, setViewMode] = React.useState('categories');
+            const inputRef = React.useRef(null);
             
-            useEffect(() => {
+            React.useEffect(() => {
                 const input = inputRef.current;
                 if (!input) return;
                 
@@ -347,15 +347,14 @@
             const [itemsViewMode, setItemsViewMode] = useState('categories'); // 'categories' or 'alphabetical'
             const [itemsSearchQuery, setItemsSearchQuery] = useState('');
 
-            // 🔥 SCROLL MEMORY SYSTEM - Onthoudt scroll positie per tab
-            const scrollMemory = useRef({
+            // Scroll memory voor tab switches
+            const scrollPositions = useRef({
                 stores: 0,
                 items: 0,
                 list: 0,
                 file: 0,
                 help: 0
             });
-            const previousTab = useRef(activeTab);
 
             // Use useCallback to create stable function references
             const handleSearchChange = React.useCallback((value) => {
@@ -433,41 +432,31 @@
                 }
             }, []);
 
-            // 🔥 SCROLL MEMORY - Bewaar en herstel scroll posities bij tab switches
+            // Tab scroll memory - onthoudt scroll positie per tab
             useEffect(() => {
-                // Sla scroll positie op van de vorige tab
-                if (previousTab.current !== activeTab) {
-                    const containers = {
-                        stores: document.querySelector('[data-tab="stores"]')?.querySelector('.overflow-auto'),
-                        items: document.getElementById('items-scroll-container'),
-                        list: document.querySelector('[data-tab="list"]')?.querySelector('.overflow-auto'),
-                        file: document.querySelector('[data-tab="file"]')?.querySelector('.overflow-auto'),
-                        help: document.querySelector('[data-tab="help"]')?.querySelector('.overflow-auto')
-                    };
-                    
-                    const prevContainer = containers[previousTab.current];
-                    if (prevContainer) {
-                        scrollMemory.current[previousTab.current] = prevContainer.scrollTop;
-                    }
-                    
-                    previousTab.current = activeTab;
-                }
+                const containers = {
+                    stores: document.querySelector('[data-tab="stores"] .overflow-auto'),
+                    items: document.getElementById('items-scroll-container'),
+                    list: document.querySelector('[data-tab="list"] .overflow-auto'),
+                    file: document.querySelector('[data-tab="file"] .overflow-auto'),
+                    help: document.querySelector('[data-tab="help"] .overflow-auto')
+                };
                 
-                // Herstel scroll positie van de nieuwe tab (na render)
-                requestAnimationFrame(() => {
-                    const containers = {
-                        stores: document.querySelector('[data-tab="stores"]')?.querySelector('.overflow-auto'),
-                        items: document.getElementById('items-scroll-container'),
-                        list: document.querySelector('[data-tab="list"]')?.querySelector('.overflow-auto'),
-                        file: document.querySelector('[data-tab="file"]')?.querySelector('.overflow-auto'),
-                        help: document.querySelector('[data-tab="help"]')?.querySelector('.overflow-auto')
-                    };
-                    
-                    const currentContainer = containers[activeTab];
-                    if (currentContainer && scrollMemory.current[activeTab] !== undefined) {
-                        currentContainer.scrollTop = scrollMemory.current[activeTab];
+                // Sla scroll posities op van alle tabs
+                Object.keys(containers).forEach(tab => {
+                    const container = containers[tab];
+                    if (container) {
+                        scrollPositions.current[tab] = container.scrollTop;
                     }
                 });
+                
+                // Herstel scroll van de actieve tab
+                setTimeout(() => {
+                    const activeContainer = containers[activeTab];
+                    if (activeContainer && scrollPositions.current[activeTab] !== undefined) {
+                        activeContainer.scrollTop = scrollPositions.current[activeTab];
+                    }
+                }, 50);
             }, [activeTab]);
 
             const saveStores = (data) => {
@@ -923,19 +912,6 @@
             }
 
             function ItemsTab() {
-                // 🔥 Herstel scroll NA modal sluiten
-                useEffect(() => {
-                    if (showItemDetail === null) {
-                        // Modal is net gesloten, herstel scroll
-                        requestAnimationFrame(() => {
-                            const container = document.getElementById('items-scroll-container');
-                            if (container && scrollMemory.current.items !== undefined) {
-                                container.scrollTop = scrollMemory.current.items;
-                            }
-                        });
-                    }
-                }, [showItemDetail]);
-
                 // NO FILTERING - show all items and let DOM manipulation handle visibility
                 const sortedAlphabetically = [...items].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1110,13 +1086,17 @@
                                 categories={categories}
                                 onSave={(id, updates) => updateItem(id, updates)}
                                 onClose={() => {
-                                    // Sla scroll positie op VOOR sluiten
                                     const scrollContainer = document.getElementById('items-scroll-container');
-                                    if (scrollContainer) {
-                                        scrollMemory.current.items = scrollContainer.scrollTop;
-                                    }
+                                    const scrollPosition = scrollContainer ? scrollContainer.scrollTop : 0;
                                     
                                     setShowItemDetail(null);
+                                    
+                                    setTimeout(() => {
+                                        const container = document.getElementById('items-scroll-container');
+                                        if (container) {
+                                            container.scrollTop = scrollPosition;
+                                        }
+                                    }, 100);
                                 }}
                             />
                         )}
