@@ -316,7 +316,9 @@
                             type="button"
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                            Ã—
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </div>
 
@@ -358,6 +360,8 @@
             const [newItemCategory, setNewItemCategory] = useState('');
             const [itemsViewMode, setItemsViewMode] = useState('categories'); // 'categories' or 'alphabetical'
             const [itemsSearchQuery, setItemsSearchQuery] = useState('');
+            const [isStandalone, setIsStandalone] = useState(false);
+            const [showInstallBanner, setShowInstallBanner] = useState(true);
 
             // Use useCallback to create stable function references
             const handleSearchChange = React.useCallback((value) => {
@@ -370,6 +374,19 @@
 
             const handleEditToggle = React.useCallback(() => {
                 setEditMode(prev => !prev);
+            }, []);
+
+            // Detect if app is running as PWA or in browser
+            useEffect(() => {
+                const standalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                 window.navigator.standalone === true;
+                setIsStandalone(standalone);
+                
+                // Check if banner was dismissed before
+                const bannerDismissed = localStorage.getItem('cartpal_install_banner_dismissed');
+                if (bannerDismissed) {
+                    setShowInstallBanner(false);
+                }
             }, []);
 
             useEffect(() => {
@@ -1269,6 +1286,58 @@
                                 </p>
                             </section>
 
+                            {/* PWA Installation Instructions */}
+                            <section className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                <h2 className="text-lg font-bold mb-2 text-blue-600">📱 Install CartPal as an App</h2>
+                                <p className="text-sm text-gray-700 mb-3">
+                                    For the best experience, install CartPal on your device! It works offline and feels like a native app.
+                                </p>
+                                
+                                <div className="space-y-4">
+                                    {/* iPhone/iPad Instructions */}
+                                    <div>
+                                        <h3 className="font-semibold text-sm mb-2 text-blue-700">📱 iPhone / iPad (Safari)</h3>
+                                        <ol className="text-sm text-gray-700 space-y-1 ml-4">
+                                            <li>1. Open CartPal in <strong>Safari</strong></li>
+                                            <li>2. Tap the <strong>Share button</strong> (square with arrow up)</li>
+                                            <li>3. Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                                            <li>4. Tap <strong>"Add"</strong></li>
+                                            <li>5. Find CartPal icon on your home screen!</li>
+                                        </ol>
+                                    </div>
+                                    
+                                    {/* Android Instructions */}
+                                    <div>
+                                        <h3 className="font-semibold text-sm mb-2 text-blue-700">🤖 Android (Chrome)</h3>
+                                        <ol className="text-sm text-gray-700 space-y-1 ml-4">
+                                            <li>1. Open CartPal in <strong>Chrome</strong></li>
+                                            <li>2. Tap the <strong>three-dot menu</strong> (⋮)</li>
+                                            <li>3. Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong></li>
+                                            <li>4. Tap <strong>"Install"</strong></li>
+                                            <li>5. Find CartPal icon in your app drawer!</li>
+                                        </ol>
+                                    </div>
+                                    
+                                    {/* Desktop Instructions */}
+                                    <div>
+                                        <h3 className="font-semibold text-sm mb-2 text-blue-700">💻 Desktop (Chrome / Edge)</h3>
+                                        <ol className="text-sm text-gray-700 space-y-1 ml-4">
+                                            <li>1. Open CartPal in <strong>Chrome</strong> or <strong>Edge</strong></li>
+                                            <li>2. Look for the <strong>install icon</strong> (⊕) in the address bar</li>
+                                            <li>3. Click <strong>"Install"</strong></li>
+                                            <li>4. CartPal opens as a desktop app!</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 p-3 bg-blue-100 rounded">
+                                    <p className="text-xs text-blue-800">
+                                        <strong>Why install?</strong> Works offline, faster loading, no browser UI cluttering your screen, 
+                                        feels like a real app!
+                                    </p>
+                                </div>
+                            </section>
+
                             {/* Stores Tab */}
                             <section>
                                 <h2 className="text-lg font-bold mb-2 text-green-600">Stores Tab</h2>
@@ -1361,6 +1430,40 @@
 
             return (
                 <div className="flex flex-col h-screen bg-white">
+                    {/* Install Banner - Only shown in browser mode */}
+                    {!isStandalone && showInstallBanner && (
+                        <div className="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow-md">
+                            <div className="flex items-center gap-2 flex-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold">Install CartPal</p>
+                                    <p className="text-xs opacity-90">Get the best experience!</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setActiveTab('help')}
+                                    className="px-3 py-1 bg-white text-green-600 rounded text-sm font-semibold"
+                                >
+                                    How?
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowInstallBanner(false);
+                                        localStorage.setItem('cartpal_install_banner_dismissed', 'true');
+                                    }}
+                                    className="text-white hover:text-green-100"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex-1 overflow-hidden">
                         {activeTab === 'stores' && <StoresTab />}
                         {activeTab === 'items' && <ItemsTab />}
@@ -1376,14 +1479,14 @@
                             target="_blank"
                             rel="noopener noreferrer"
                             className="fixed bottom-24 right-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-green-700 hover:scale-110 transition-all z-50"
-                            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+                            style={{ marginBottom: !isStandalone ? '80px' : 'env(safe-area-inset-bottom)' }}
                             aria-label="Send feedback"
                         >
                             ðŸ’¬
                         </a>
                     )}
 
-                    <div className="flex border-t bg-white bottom-nav">
+                    <div className={`flex border-t bg-white bottom-nav ${!isStandalone ? 'pb-20' : ''}`}>
                         <button onClick={() => setActiveTab('stores')} className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'stores' ? 'text-green-600' : 'text-gray-400'}`}>
                             <div className="relative">
                                 <HomeIcon />
