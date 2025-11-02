@@ -101,7 +101,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         function ItemDetailModal({ item, stores, categories, onSave, onClose }) {
             const [editingItem, setEditingItem] = useState({
@@ -224,10 +224,10 @@
 
         // Completely bypass React for search - use pure DOM manipulation
         function ItemsSearchBar({ onModeChange, onEditToggle, editMode }) {
-            const [viewMode, setViewMode] = React.useState('categories');
-            const inputRef = React.useRef(null);
+            const [viewMode, setViewMode] = useState('categories');
+            const inputRef = useRef(null);
             
-            React.useEffect(() => {
+            useEffect(() => {
                 const input = inputRef.current;
                 if (!input) return;
                 
