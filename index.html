@@ -304,7 +304,7 @@
                             type="button"
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                            ×
+                            Ã—
                         </button>
                     </div>
 
@@ -347,6 +347,16 @@
             const [itemsViewMode, setItemsViewMode] = useState('categories'); // 'categories' or 'alphabetical'
             const [itemsSearchQuery, setItemsSearchQuery] = useState('');
 
+            // 🔥 SCROLL MEMORY SYSTEM - Onthoudt scroll positie per tab
+            const scrollMemory = useRef({
+                stores: 0,
+                items: 0,
+                list: 0,
+                file: 0,
+                help: 0
+            });
+            const previousTab = useRef(activeTab);
+
             // Use useCallback to create stable function references
             const handleSearchChange = React.useCallback((value) => {
                 setItemsSearchQuery(value);
@@ -369,15 +379,15 @@
                     
                     if (oldStoresData && !localStorage.getItem('cartpal_stores')) {
                         localStorage.setItem('cartpal_stores', oldStoresData);
-                        console.log('âœ… Migrated stores data from ezShopList to CartPal');
+                        console.log('Ã¢Å“â€¦ Migrated stores data from ezShopList to CartPal');
                     }
                     if (oldCategoriesData && !localStorage.getItem('cartpal_categories')) {
                         localStorage.setItem('cartpal_categories', oldCategoriesData);
-                        console.log('âœ… Migrated categories data from ezShopList to CartPal');
+                        console.log('Ã¢Å“â€¦ Migrated categories data from ezShopList to CartPal');
                     }
                     if (oldItemsData && !localStorage.getItem('cartpal_items')) {
                         localStorage.setItem('cartpal_items', oldItemsData);
-                        console.log('âœ… Migrated items data from ezShopList to CartPal');
+                        console.log('Ã¢Å“â€¦ Migrated items data from ezShopList to CartPal');
                     }
                     
                     // Load data (either migrated or existing)
@@ -413,7 +423,7 @@
                             // Save cleaned data back to localStorage
                             localStorage.setItem('cartpal_items', JSON.stringify(cleanedItems));
                             
-                            console.log('âœ… Cleaned up old store references from items');
+                            console.log('Ã¢Å“â€¦ Cleaned up old store references from items');
                         } else {
                             setItems(loadedItems);
                         }
@@ -422,6 +432,43 @@
                     console.log('No saved data');
                 }
             }, []);
+
+            // 🔥 SCROLL MEMORY - Bewaar en herstel scroll posities bij tab switches
+            useEffect(() => {
+                // Sla scroll positie op van de vorige tab
+                if (previousTab.current !== activeTab) {
+                    const containers = {
+                        stores: document.querySelector('[data-tab="stores"]')?.querySelector('.overflow-auto'),
+                        items: document.getElementById('items-scroll-container'),
+                        list: document.querySelector('[data-tab="list"]')?.querySelector('.overflow-auto'),
+                        file: document.querySelector('[data-tab="file"]')?.querySelector('.overflow-auto'),
+                        help: document.querySelector('[data-tab="help"]')?.querySelector('.overflow-auto')
+                    };
+                    
+                    const prevContainer = containers[previousTab.current];
+                    if (prevContainer) {
+                        scrollMemory.current[previousTab.current] = prevContainer.scrollTop;
+                    }
+                    
+                    previousTab.current = activeTab;
+                }
+                
+                // Herstel scroll positie van de nieuwe tab (na render)
+                requestAnimationFrame(() => {
+                    const containers = {
+                        stores: document.querySelector('[data-tab="stores"]')?.querySelector('.overflow-auto'),
+                        items: document.getElementById('items-scroll-container'),
+                        list: document.querySelector('[data-tab="list"]')?.querySelector('.overflow-auto'),
+                        file: document.querySelector('[data-tab="file"]')?.querySelector('.overflow-auto'),
+                        help: document.querySelector('[data-tab="help"]')?.querySelector('.overflow-auto')
+                    };
+                    
+                    const currentContainer = containers[activeTab];
+                    if (currentContainer && scrollMemory.current[activeTab] !== undefined) {
+                        currentContainer.scrollTop = scrollMemory.current[activeTab];
+                    }
+                });
+            }, [activeTab]);
 
             const saveStores = (data) => {
                 setStores(data);
@@ -735,7 +782,7 @@
                         escapeCSV(category?.name || '')
                     ];
                     stores.forEach(store => {
-                        row.push(escapeCSV('â‚¬ 0,00'));  // Properly escaped now
+                        row.push(escapeCSV('Ã¢â€šÂ¬ 0,00'));  // Properly escaped now
                         row.push(escapeCSV(item.storeData[store.id]?.section || ''));
                     });
                     rows.push(row.join(','));
@@ -767,7 +814,7 @@
 
             function StoresTab() {
                 return (
-                    <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full" data-tab="stores">
                         <div className="flex justify-between items-center px-4 pt-4 pb-4 border-b">
                             <div className="flex-1">
                                 <h1 className="text-xl font-bold">Stores</h1>
@@ -876,6 +923,19 @@
             }
 
             function ItemsTab() {
+                // 🔥 Herstel scroll NA modal sluiten
+                useEffect(() => {
+                    if (showItemDetail === null) {
+                        // Modal is net gesloten, herstel scroll
+                        requestAnimationFrame(() => {
+                            const container = document.getElementById('items-scroll-container');
+                            if (container && scrollMemory.current.items !== undefined) {
+                                container.scrollTop = scrollMemory.current.items;
+                            }
+                        });
+                    }
+                }, [showItemDetail]);
+
                 // NO FILTERING - show all items and let DOM manipulation handle visibility
                 const sortedAlphabetically = [...items].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -900,7 +960,7 @@
                 };
 
                 return (
-                    <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full" data-tab="items">
                         <ItemsSearchBar 
                             onModeChange={handleModeChange}
                             onEditToggle={handleEditToggle}
@@ -1050,17 +1110,13 @@
                                 categories={categories}
                                 onSave={(id, updates) => updateItem(id, updates)}
                                 onClose={() => {
+                                    // Sla scroll positie op VOOR sluiten
                                     const scrollContainer = document.getElementById('items-scroll-container');
-                                    const scrollPosition = scrollContainer ? scrollContainer.scrollTop : 0;
+                                    if (scrollContainer) {
+                                        scrollMemory.current.items = scrollContainer.scrollTop;
+                                    }
                                     
                                     setShowItemDetail(null);
-                                    
-                                    setTimeout(() => {
-                                        const container = document.getElementById('items-scroll-container');
-                                        if (container) {
-                                            container.scrollTop = scrollPosition;
-                                        }
-                                    }, 0);
                                 }}
                             />
                         )}
@@ -1074,7 +1130,7 @@
                 const bought = listItems.filter(item => item.bought);
 
                 return (
-                    <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full" data-tab="list">
                         <div className="flex justify-between items-center px-4 pt-4 pb-4 border-b">
                             <h1 className="text-xl font-bold">
                                 {selectedStore === 'all' ? 'All Stores' : stores.find(s => s.id === selectedStore)?.name || 'Select Store'}
@@ -1149,7 +1205,7 @@
 
             function FileTab() {
                 return (
-                    <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full" data-tab="file">
                         <div className="px-4 pt-4 pb-4 border-b">
                             <h1 className="text-xl font-bold">File Management</h1>
                         </div>
@@ -1176,9 +1232,9 @@
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                 <h3 className="font-semibold mb-2">Data Storage</h3>
                                 <div className="text-sm text-gray-600 space-y-1">
-                                    <p>â€¢ Stores: {stores.length}</p>
-                                    <p>â€¢ Categories: {categories.length}</p>
-                                    <p>â€¢ Items: {items.length}</p>
+                                    <p>Ã¢â‚¬Â¢ Stores: {stores.length}</p>
+                                    <p>Ã¢â‚¬Â¢ Categories: {categories.length}</p>
+                                    <p>Ã¢â‚¬Â¢ Items: {items.length}</p>
                                     <p className="mt-3 text-xs">Data is automatically saved on your device</p>
                                 </div>
                             </div>
@@ -1189,7 +1245,7 @@
 
             function HelpTab() {
                 return (
-                    <div className="flex flex-col h-full overflow-auto">
+                    <div className="flex flex-col h-full overflow-auto" data-tab="help">
                         <div className="px-4 pt-4 pb-4 border-b bg-green-600 text-white">
                             <h1 className="text-xl font-bold">CartPal User Manual</h1>
                             <p className="text-sm mt-1 opacity-90">How to use this shopping list app</p>
@@ -1207,22 +1263,22 @@
 
                             {/* Feedback Section */}
                             <section className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                                <h2 className="text-lg font-bold mb-2 text-green-600">💬 Share Your Feedback</h2>
+                                <h2 className="text-lg font-bold mb-2 text-green-600">ðŸ’¬ Share Your Feedback</h2>
                                 <p className="text-sm text-gray-700 mb-3">
                                     We'd love to hear from you! Your feedback helps make CartPal better for everyone.
                                 </p>
                                 <p className="text-sm text-gray-600 mb-3">
-                                    Click the <span className="inline-block w-6 h-6 bg-green-600 text-white rounded-full text-center leading-6">💬</span> button 
+                                    Click the <span className="inline-block w-6 h-6 bg-green-600 text-white rounded-full text-center leading-6">ðŸ’¬</span> button 
                                     in the bottom-right corner to:
                                 </p>
                                 <ul className="text-sm text-gray-700 space-y-1 ml-4">
-                                    <li>• Share what you love about CartPal</li>
-                                    <li>• Report bugs or issues</li>
-                                    <li>• Request new features</li>
-                                    <li>• Ask questions</li>
+                                    <li>â€¢ Share what you love about CartPal</li>
+                                    <li>â€¢ Report bugs or issues</li>
+                                    <li>â€¢ Request new features</li>
+                                    <li>â€¢ Ask questions</li>
                                 </ul>
                                 <p className="text-xs text-gray-500 mt-3">
-                                    100% anonymous and voluntary • Takes less than 2 minutes
+                                    100% anonymous and voluntary â€¢ Takes less than 2 minutes
                                 </p>
                             </section>
 
@@ -1246,8 +1302,8 @@
                                     <p><strong>Search:</strong> Use the search bar to quickly find items. The keyboard stays open while you type!</p>
                                     <p><strong>View Modes:</strong></p>
                                     <ul className="ml-4 space-y-1">
-                                        <li>â€¢ <strong>Categories:</strong> Items grouped by category (expand/collapse)</li>
-                                        <li>â€¢ <strong>Items Only:</strong> All items alphabetically in one list</li>
+                                        <li>Ã¢â‚¬Â¢ <strong>Categories:</strong> Items grouped by category (expand/collapse)</li>
+                                        <li>Ã¢â‚¬Â¢ <strong>Items Only:</strong> All items alphabetically in one list</li>
                                     </ul>
                                     <p><strong>Add Items:</strong> In Edit mode, add items and assign them to categories.</p>
                                     <p><strong>Quantity Buttons:</strong> Use + and - to adjust how many you need.</p>
@@ -1336,7 +1392,7 @@
                             style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
                             aria-label="Send feedback"
                         >
-                            💬
+                            ðŸ’¬
                         </a>
                     )}
 
