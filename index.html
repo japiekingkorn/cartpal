@@ -108,12 +108,29 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function ItemDetailModal({ item, stores, categories, onSave, onClose }) {
+        function ItemDetailModal({ item, stores, categories, onSave, onClose, onDelete }) {
             const [editingItem, setEditingItem] = useState({
                 name: item.name,
                 categoryId: item.categoryId,
                 storeData: { ...item.storeData }
             });
+
+            const handleSave = () => {
+                // Save scroll position BEFORE saving
+                const container = document.getElementById('items-scroll-container');
+                const scrollPosition = container ? container.scrollTop : 0;
+                
+                onSave(item.id, editingItem);
+                onClose();
+                
+                // Restore scroll position AFTER save
+                setTimeout(() => {
+                    const container = document.getElementById('items-scroll-container');
+                    if (container) {
+                        container.scrollTop = scrollPosition;
+                    }
+                }, 0);
+            };
 
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -122,10 +139,7 @@
                             <h2 className="text-lg font-bold">Item Details</h2>
                             <div className="flex gap-2">
                                 <button 
-                                    onClick={() => {
-                                        onSave(item.id, editingItem);
-                                        onClose();
-                                    }} 
+                                    onClick={handleSave}
                                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                                 >
                                     Save
@@ -219,6 +233,22 @@
                                     );
                                 })}
                             </div>
+                            
+                            {/* DELETE BUTTON */}
+                            <div className="pt-4 border-t">
+                                <button 
+                                    onClick={() => {
+                                        if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+                                            onDelete(item.id);
+                                            onClose();
+                                        }
+                                    }}
+                                    className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold flex items-center justify-center gap-2"
+                                >
+                                    <TrashIcon />
+                                    Delete Item
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -309,7 +339,7 @@
                             type="button"
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                            ×
+                            Ã—
                         </button>
                     </div>
 
@@ -377,15 +407,15 @@
                     
                     if (oldStoresData && !localStorage.getItem('cartpal_stores')) {
                         localStorage.setItem('cartpal_stores', oldStoresData);
-                        console.log('✅ Migrated stores data from ezShopList to CartPal');
+                        console.log('âœ… Migrated stores data from ezShopList to CartPal');
                     }
                     if (oldCategoriesData && !localStorage.getItem('cartpal_categories')) {
                         localStorage.setItem('cartpal_categories', oldCategoriesData);
-                        console.log('✅ Migrated categories data from ezShopList to CartPal');
+                        console.log('âœ… Migrated categories data from ezShopList to CartPal');
                     }
                     if (oldItemsData && !localStorage.getItem('cartpal_items')) {
                         localStorage.setItem('cartpal_items', oldItemsData);
-                        console.log('✅ Migrated items data from ezShopList to CartPal');
+                        console.log('âœ… Migrated items data from ezShopList to CartPal');
                     }
                     
                     // Load data (either migrated or existing)
@@ -421,7 +451,7 @@
                             // Save cleaned data back to localStorage
                             localStorage.setItem('cartpal_items', JSON.stringify(cleanedItems));
                             
-                            console.log('✅ Cleaned up old store references from items');
+                            console.log('âœ… Cleaned up old store references from items');
                         } else {
                             setItems(loadedItems);
                         }
@@ -485,6 +515,10 @@
 
             const addItem = () => {
                 if (newItemName.trim() && newItemCategory) {
+                    // Save scroll position BEFORE adding item
+                    const container = document.getElementById('items-scroll-container');
+                    const scrollPosition = container ? container.scrollTop : 0;
+                    
                     saveItems([...items, {
                         id: Date.now(),
                         name: newItemName,
@@ -496,12 +530,32 @@
                     setNewItemName('');
                     setNewItemCategory('');
                     setShowAddItem(false);
+                    
+                    // Restore scroll position AFTER state update
+                    setTimeout(() => {
+                        const container = document.getElementById('items-scroll-container');
+                        if (container) {
+                            container.scrollTop = scrollPosition;
+                        }
+                    }, 0);
                 }
             };
 
             const deleteItem = (id) => {
+                // Save scroll position BEFORE deleting
+                const container = document.getElementById('items-scroll-container');
+                const scrollPosition = container ? container.scrollTop : 0;
+                
                 saveItems(items.filter(i => i.id !== id));
                 setShowItemDetail(null);
+                
+                // Restore scroll position AFTER deletion
+                setTimeout(() => {
+                    const container = document.getElementById('items-scroll-container');
+                    if (container) {
+                        container.scrollTop = scrollPosition;
+                    }
+                }, 0);
             };
 
             const openItemDetail = (item) => {
@@ -714,7 +768,7 @@
                         escapeCSV(category?.name || '')
                     ];
                     stores.forEach(store => {
-                        row.push(escapeCSV('€ 0,00'));  // Properly escaped now
+                        row.push(escapeCSV('â‚¬ 0,00'));  // Properly escaped now
                         row.push(escapeCSV(item.storeData[store.id]?.section || ''));
                     });
                     rows.push(row.join(','));
@@ -1017,6 +1071,7 @@
                                 categories={categories}
                                 onSave={(id, updates) => updateItem(id, updates)}
                                 onClose={() => setShowItemDetail(null)}
+                                onDelete={deleteItem}
                             />
                         )}
                     </div>
@@ -1131,9 +1186,9 @@
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                 <h3 className="font-semibold mb-2">Data Storage</h3>
                                 <div className="text-sm text-gray-600 space-y-1">
-                                    <p>• Stores: {stores.length}</p>
-                                    <p>• Categories: {categories.length}</p>
-                                    <p>• Items: {items.length}</p>
+                                    <p>â€¢ Stores: {stores.length}</p>
+                                    <p>â€¢ Categories: {categories.length}</p>
+                                    <p>â€¢ Items: {items.length}</p>
                                     <p className="mt-3 text-xs">Data is automatically saved on your device</p>
                                 </div>
                             </div>
@@ -1162,22 +1217,22 @@
 
                             {/* Feedback Section */}
                             <section className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                                <h2 className="text-lg font-bold mb-2 text-green-600">💬 Share Your Feedback</h2>
+                                <h2 className="text-lg font-bold mb-2 text-green-600">ðŸ’¬ Share Your Feedback</h2>
                                 <p className="text-sm text-gray-700 mb-3">
                                     We'd love to hear from you! Your feedback helps make CartPal better for everyone.
                                 </p>
                                 <p className="text-sm text-gray-600 mb-3">
-                                    Click the <span className="inline-block w-6 h-6 bg-green-600 text-white rounded-full text-center leading-6">💬</span> button 
+                                    Click the <span className="inline-block w-6 h-6 bg-green-600 text-white rounded-full text-center leading-6">ðŸ’¬</span> button 
                                     in the bottom-right corner to:
                                 </p>
                                 <ul className="text-sm text-gray-700 space-y-1 ml-4">
-                                    <li>• Share what you love about CartPal</li>
-                                    <li>• Report bugs or issues</li>
-                                    <li>• Request new features</li>
-                                    <li>• Ask questions</li>
+                                    <li>â€¢ Share what you love about CartPal</li>
+                                    <li>â€¢ Report bugs or issues</li>
+                                    <li>â€¢ Request new features</li>
+                                    <li>â€¢ Ask questions</li>
                                 </ul>
                                 <p className="text-xs text-gray-500 mt-3">
-                                    100% anonymous and voluntary • Takes less than 2 minutes
+                                    100% anonymous and voluntary â€¢ Takes less than 2 minutes
                                 </p>
                             </section>
 
@@ -1201,8 +1256,8 @@
                                     <p><strong>Search:</strong> Use the search bar to quickly find items. The keyboard stays open while you type!</p>
                                     <p><strong>View Modes:</strong></p>
                                     <ul className="ml-4 space-y-1">
-                                        <li>• <strong>Categories:</strong> Items grouped by category (expand/collapse)</li>
-                                        <li>• <strong>Items Only:</strong> All items alphabetically in one list</li>
+                                        <li>â€¢ <strong>Categories:</strong> Items grouped by category (expand/collapse)</li>
+                                        <li>â€¢ <strong>Items Only:</strong> All items alphabetically in one list</li>
                                     </ul>
                                     <p><strong>Add Items:</strong> In Edit mode, add items and assign them to categories.</p>
                                     <p><strong>Quantity Buttons:</strong> Use + and - to adjust how many you need.</p>
@@ -1282,7 +1337,7 @@
                                     <div>
                                         <h3 className="font-semibold text-blue-600">Android (Chrome):</h3>
                                         <ol className="list-decimal ml-5 mt-1 space-y-1">
-                                            <li>Tap the three dots menu (⋮) in the top right</li>
+                                            <li>Tap the three dots menu (â‹®) in the top right</li>
                                             <li>Tap "Add to Home screen" or "Install app"</li>
                                             <li>Tap "Add" or "Install"</li>
                                             <li>CartPal icon will appear on your home screen</li>
@@ -1294,7 +1349,7 @@
                                         <ol className="list-decimal ml-5 mt-1 space-y-1">
                                             <li>Look for the install icon in the address bar (computer with arrow)</li>
                                             <li>Click it and select "Install"</li>
-                                            <li>Or go to browser menu → "Install CartPal"</li>
+                                            <li>Or go to browser menu â†’ "Install CartPal"</li>
                                             <li>CartPal will open as a standalone window</li>
                                         </ol>
                                     </div>
@@ -1337,7 +1392,7 @@
                             style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
                             aria-label="Send feedback"
                         >
-                            💬
+                            ðŸ’¬
                         </a>
                     )}
 
