@@ -18,7 +18,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Tailwind via CDN (zoals in originele versie) -->
+    <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
@@ -40,7 +40,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         .bottom-nav {
-            padding-bottom: 4rem; /* fallback */
+            padding-bottom: 4rem;
         }
         @supports (padding: max(0px)) {
             .bottom-nav {
@@ -86,7 +86,6 @@
 <body>
     <!-- Splash Screen -->
     <div id="splash-screen">
-        <!-- 🔹 Logo nu uit icons-map -->
         <img id="splash-logo" src="icons/icon-192.png" alt="CartPal Logo">
     </div>
 
@@ -364,7 +363,7 @@
 
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+                    <div className="bg-white rounded-lg w-full max-w-md max-height-[80vh] flex flex-col">
                         <div className="flex justify-between items-center p-4 border-b">
                             <h2 className="text-lg font-bold">Store Details</h2>
                             <button onClick={onClose}><XIcon /></button>
@@ -441,7 +440,7 @@
             );
         }
 
-        /* ---------------- SEARCH BAR (met nette ×) ---------------- */
+        /* ---------------- SEARCH BAR ---------------- */
 
         function ItemsSearchBar({ onModeChange, onEditToggle, editMode }) {
             const [viewMode, setViewMode] = useState('categories');
@@ -593,7 +592,6 @@
             };
 
             const saveCategories = (data) => {
-                // sort alfabetisch op naam
                 const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
                 setCategories(sorted);
                 localStorage.setItem('cartpal_categories', JSON.stringify(sorted));
@@ -622,7 +620,7 @@
             const deleteStore = (id) => {
                 if (!confirm('Delete this store?')) return;
                 saveStores(stores.filter(s => s.id !== id));
-                // verwijder storeData verwijzing uit items
+
                 const newItems = items.map(it => {
                     const sd = { ...(it.storeData || {}) };
                     if (sd[id]) {
@@ -668,7 +666,6 @@
 
             const deleteCategory = (id) => {
                 if (!confirm('Delete this category?')) return;
-                // items houden categoryId maar je kunt zelf later opruimen; of set naar null
                 const updatedItems = items.map(it =>
                     it.categoryId === id ? { ...it, categoryId: null } : it
                 );
@@ -680,7 +677,7 @@
                 const t = newName.trim();
                 if (!t) return;
                 const updated = categories.map(c => c.id === id ? { ...c, name: t } : c);
-                saveCategories(updated); // sort zit in saveCategories
+                saveCategories(updated);
             };
 
             /* ---- ITEMS ---- */
@@ -732,7 +729,7 @@
             const getTotalItemQuantity = () =>
                 items.reduce((sum, it) => sum + (it.quantity || 0), 0);
 
-            /* ---- scroll helper voor LIST ---- */
+            /* ---- scroll helper LIST ---- */
 
             const getListScrollPosition = () => {
                 const container = document.getElementById('list-scroll-container');
@@ -761,7 +758,7 @@
                 setTimeout(() => restoreListScrollPosition(pos), 0);
             };
 
-            /* ---- scroll helper voor ITEMS ---- */
+            /* ---- scroll helper ITEMS ---- */
 
             const updateQuantity = (itemId, delta) => {
                 const container = document.getElementById('items-scroll-container');
@@ -790,7 +787,7 @@
                 const updated = items.map(it => {
                     if (it.id === itemId) {
                         const current = it.quantity || 0;
-                        const next = Math.max(1, current); // min 1
+                        const next = Math.max(1, current);
                         return { ...it, quantity: next };
                     }
                     return it;
@@ -838,7 +835,6 @@
                             throw new Error('Missing base headers');
                         }
 
-                        // store columns
                         const storeColumns = {};
                         headers.forEach((h, idx) => {
                             const m = h.match(/^(.+?)\s+(cost|section)$/);
@@ -955,9 +951,8 @@
                 URL.revokeObjectURL(url);
             };
 
-            /* ---- TABS ---- */
+            /* ---- TABS CONTENT ---- */
 
-            // Zorg dat tabs gemount blijven -> scrollposities blijven bewaard
             const renderStoresTab = () => (
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center px-4 pt-4 pb-4 border-b">
@@ -1407,7 +1402,9 @@
                                                 className="flex items-center px-4 py-3 border-b bg-gray-50 cursor-pointer"
                                             >
                                                 <div className="flex-1">
-                                                    <div className="font-medium line-through text-gray-500">{item.name}</div>
+                                                    <div className="font-medium line-through text-gray-500">
+                                                        {item.name}
+                                                    </div>
                                                     <div className="text-sm text-gray-500">
                                                         {section && <span className="mr-2">[{section}]</span>}
                                                         {cat ? cat.name : 'No category'}
@@ -1492,36 +1489,132 @@
                     </div>
 
                     <div className="p-4 space-y-6">
+                        {/* Overview */}
                         <section>
                             <h2 className="text-lg font-bold mb-2 text-green-600">Overview</h2>
                             <p className="text-sm text-gray-700">
                                 CartPal helps you organize your shopping across multiple stores.
-                                Create items, assign them to categories, set which store section
-                                they're in, and build your shopping list.
+                                You create items, group them in categories, mark which stores sell
+                                them and in which section, and then build your shopping list per store.
                             </p>
                         </section>
 
+                        {/* Key Concepts */}
                         <section>
-                            <h2 className="text-lg font-bold mb-2 text-green-600">Tabs</h2>
-                            <ul className="text-sm text-gray-700 space-y-1 ml-4">
-                                <li>• <strong>Stores</strong> – manage stores and choose where you shop.</li>
-                                <li>• <strong>Items</strong> – manage items, categories and quantities.</li>
-                                <li>• <strong>List</strong> – see your shopping list by store/section.</li>
-                                <li>• <strong>File</strong> – import/export CSV data.</li>
-                                <li>• <strong>Help</strong> – this help page.</li>
+                            <h2 className="text-lg font-bold mb-2 text-green-600">Key concepts</h2>
+                            <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+                                <li>
+                                    <strong>Store</strong> – a supermarket or shop where you buy items.
+                                </li>
+                                <li>
+                                    <strong>Section</strong> – an aisle or area in that store
+                                    (e.g. "Produce", "Dairy", "Frozen").
+                                </li>
+                                <li>
+                                    <strong>Category</strong> – a logical group for items
+                                    (e.g. "Vegetables", "Breakfast", "Cleaning").
+                                </li>
+                                <li>
+                                    <strong>Item</strong> – a product you want to buy (e.g. "Milk", "Apples").
+                                </li>
+                                <li>
+                                    <strong>Quantity</strong> – how many units you want to buy.
+                                </li>
+                                <li>
+                                    <strong>Bought</strong> – whether you have already picked up the item.
+                                </li>
                             </ul>
                         </section>
 
+                        {/* Tabs */}
                         <section>
-                            <h2 className="text-lg font-bold mb-2 text-green-600">How to Use</h2>
+                            <h2 className="text-lg font-bold mb-2 text-green-600">Tabs in CartPal</h2>
+                            <ul className="text-sm text-gray-700 space-y-2 ml-4">
+                                <li>
+                                    <strong>Stores</strong> – add and edit stores, define sections,
+                                    and select which store you are shopping in.
+                                </li>
+                                <li>
+                                    <strong>Items</strong> – manage all items and categories,
+                                    and set quantities for your list.
+                                </li>
+                                <li>
+                                    <strong>List</strong> – your actual shopping list, filtered
+                                    by store and sorted by section.
+                                </li>
+                                <li>
+                                    <strong>File</strong> – import/export your data via CSV
+                                    (for backup or moving data).
+                                </li>
+                                <li>
+                                    <strong>Help</strong> – this manual and the feedback button.
+                                </li>
+                            </ul>
+                        </section>
+
+                        {/* Quick Start */}
+                        <section>
+                            <h2 className="text-lg font-bold mb-2 text-green-600">Quick start</h2>
                             <ol className="text-sm text-gray-700 space-y-2 ml-4 list-decimal">
-                                <li>Add your stores and optional sections.</li>
-                                <li>Create categories and items.</li>
-                                <li>Assign items to stores and sections.</li>
-                                <li>Set item quantities in the Items tab.</li>
-                                <li>Go to the List tab and start shopping.</li>
-                                <li>Tap an item to mark it as bought.</li>
+                                <li>Go to <strong>Stores</strong> and add one or more stores.</li>
+                                <li>Optionally, add store sections (e.g. "Produce", "Dairy", "Bread").</li>
+                                <li>Go to <strong>Items</strong> and create categories and items.</li>
+                                <li>In the item details, mark which stores sell the item and in which section.</li>
+                                <li>
+                                    In the <strong>Items</strong> tab, tap an item to put it on
+                                    your list (quantity becomes at least 1).
+                                </li>
+                                <li>
+                                    Go to the <strong>List</strong> tab and select a store to see
+                                    what to buy there.
+                                </li>
+                                <li>Tap an item on the list to mark it as bought.</li>
                             </ol>
+                        </section>
+
+                        {/* Tips */}
+                        <section>
+                            <h2 className="text-lg font-bold mb-2 text-green-600">Tips & tricks</h2>
+                            <ul className="text-sm text-gray-700 space-y-2 ml-4 list-disc">
+                                <li>
+                                    Use <strong>Categories</strong> to keep items manageable
+                                    and easier to find.
+                                </li>
+                                <li>
+                                    In the <strong>Items</strong> tab you can switch between
+                                    viewing by category or a simple alphabetical list.
+                                </li>
+                                <li>
+                                    Use the <strong>search bar</strong> in the Items tab to
+                                    quickly jump to a specific product.
+                                </li>
+                                <li>
+                                    The app remembers your scroll position per tab, so you can
+                                    switch between Stores / Items / List without losing your place.
+                                </li>
+                            </ul>
+                        </section>
+
+                        {/* Feedback Section */}
+                        <section className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                            <h2 className="text-lg font-bold mb-2 text-green-600">💬 Share your feedback</h2>
+                            <p className="text-sm text-gray-700 mb-3">
+                                We’d love to hear from you. Your feedback helps make CartPal better
+                                and more pleasant to use.
+                            </p>
+                            <p className="text-sm text-gray-600 mb-3">
+                                In this Help tab you will see a small green{" "}
+                                <span className="inline-flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-center leading-6">
+                                    💬
+                                </span>{" "}
+                                button in the bottom-right corner of the screen.
+                                Tap it to open the feedback form.
+                            </p>
+                            <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+                                <li>Share what works well for you.</li>
+                                <li>Report bugs or strange behaviour.</li>
+                                <li>Suggest improvements or new features.</li>
+                            </ul>
                         </section>
                     </div>
                 </div>
@@ -1532,7 +1625,6 @@
             return (
                 <div className="flex flex-col h-screen bg-white">
                     <div className="flex-1 overflow-hidden">
-                        {/* Tabs blijven gemount, alleen hidden */}
                         <div className={activeTab === 'stores' ? 'h-full' : 'hidden'}>
                             {renderStoresTab()}
                         </div>
@@ -1549,6 +1641,20 @@
                             {renderHelpTab()}
                         </div>
                     </div>
+
+                    {/* 💬 Floating Feedback Button - only on Help tab */}
+                    {activeTab === 'help' && (
+                        <a
+                            href="https://forms.gle/2J1L8CUDocywCXQy5"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="fixed bottom-24 right-6 w-12 h-12 bg-green-600 text-white rounded-full text-2xl flex items-center justify-center shadow-lg hover:bg-green-700 hover:scale-110 transition-transform z-50"
+                            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+                            aria-label="Send feedback"
+                        >
+                            💬
+                        </a>
+                    )}
 
                     {/* Bottom Nav */}
                     <div className="flex border-t bg-white bottom-nav">
